@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import './App.css';
 
 function App() {
-  const [date, setDate] = useState(null);
+  const [date, setDate] = useState<string | null>(null);
   useEffect(() => {
     async function getDate() {
       const res = await fetch('/api/date');
