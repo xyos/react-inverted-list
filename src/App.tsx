@@ -1,60 +1,67 @@
-import React from 'react';
-import { useEffect, useState } from 'react';
+import { LoremIpsum } from 'lorem-ipsum';
+import React, { useState } from 'react';
+import { InverseList } from './components/InverseList';
 import './App.css';
 
-function App() {
-  const [date, setDate] = useState<string | null>(null);
-  useEffect(() => {
-    async function getDate() {
-      const res = await fetch('/api/date');
-      const newDate = await res.text();
-      setDate(newDate);
-    }
-    getDate();
-  }, []);
+export interface IContent {
+  content: string;
+}
+
+const App: React.FC = () => {
+  const loremGenerator = new LoremIpsum({
+    sentencesPerParagraph: {
+      max: 8,
+      min: 2,
+    },
+    wordsPerSentence: {
+      max: 16,
+      min: 2,
+    },
+  });
+
+  const [numberOfItems, setNumberOfItems] = useState<string>('');
+  const [list, setList] = useState<IContent[]>([]);
+
+  const deleteListItem = (index: number) => {};
+
+  const handleNumberOfItemsChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setNumberOfItems(e.target.value);
+  };
+
+  const generateItems = () => {
+    const items: IContent[] = Array.from(Array(Number(numberOfItems)), () => ({
+      content: loremGenerator.generateParagraphs(1),
+    }));
+    console.log(items);
+    setList(items);
+  };
+
   return (
     <main>
-      <h1>Create React App + Go API</h1>
-      <h2>
-        Deployed with{' '}
-        <a
-          href="https://vercel.com/docs"
-          target="_blank"
-          rel="noreferrer noopener"
+      <div className="d-flex">
+        <input
+          className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          value={numberOfItems}
+          onChange={handleNumberOfItemsChange}
+          id="itemNumber"
+          type="number"
+          placeholder="# of items"
+        ></input>
+        <button
+          onClick={generateItems}
+          className="py-2 px-4 font-semibold rounded-lg shadow-md text-white bg-red-500 hover:bg-red-700"
         >
-          Vercel
-        </a>
-        !
-      </h2>
-      <p>
-        <a
-          href="https://github.com/vercel/vercel/tree/main/examples/create-react-app"
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          This project
-        </a>{' '}
-        was bootstrapped with{' '}
-        <a href="https://facebook.github.io/create-react-app/">
-          Create React App
-        </a>{' '}
-        and contains three directories, <code>/public</code> for static assets,{' '}
-        <code>/src</code> for components and content, and <code>/api</code>{' '}
-        which contains a serverless <a href="https://golang.org/">Go</a>{' '}
-        function. See{' '}
-        <a href="/api/date">
-          <code>api/date</code> for the Date API with Go
-        </a>
-        .
-      </p>
-      <br />
-      <h2>The date according to Go is:</h2>
-      <p>{date ? date : 'Loading date...'}</p>
-      <button className="py-2 px-4 font-semibold rounded-lg shadow-md text-white bg-green-500 hover:bg-green-700">
-      Click me
-      </button>
+          Generate
+        </button>
+        <button className="py-2 px-4 font-semibold rounded-lg shadow-md text-white bg-red-500 hover:bg-red-700">
+          Reset
+        </button>
+      </div>
+      <InverseList list={list} deleteListItem={deleteListItem}></InverseList>
     </main>
   );
-}
+};
 
 export default App;

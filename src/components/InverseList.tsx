@@ -1,18 +1,27 @@
 import { Component } from 'react';
 
+export interface IContent {
+  content: string;
+}
+
+
 export interface InverseListProps {
-  renderItem: JSX.Element;
-  list: any[];
+  deleteListItem: (index: number) => void;
+  list: IContent[];
 }
 
 export interface State {
-  list: any[];
+  list: [];
 }
 
 export class InverseList extends Component<InverseListProps, State> {
   removeItem = (index: number) => {
-    this.setState((state) => ({
-      list: state.list.filter((_: any, idx: number) => index !== idx),
-    }))
+    this.props.deleteListItem(index);
+  }
+
+  render() {
+    return (
+      <h1>LIST:</h1>
+    )
   }
 }
