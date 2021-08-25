@@ -1,0 +1,4 @@
+.scroll-bottom {
+  overscroll-behavior-y: contain;
+  scroll-snap-type: y proximity;
+}
