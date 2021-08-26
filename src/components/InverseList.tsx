@@ -1,140 +1,93 @@
-import { FC, RefObject, useEffect, useRef, useState } from 'react';
+import { ComponentType, FC, useCallback, useEffect, useRef, useState } from 'react';
 import { IContent } from '../App';
 import './InverseList.css';
 import {
-  AutoSizer,
-  CellMeasurer,
-  CellMeasurerCache,
-  List,
-} from 'react-virtualized';
-import 'react-virtualized/styles.css';
-import { MeasuredCellParent } from 'react-virtualized/dist/es/CellMeasurer';
+  Draggable,
+  DroppableProvided,
+  DroppableStateSnapshot,
+} from 'react-beautiful-dnd';
+import { ListItem } from './ListItem';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 
 export interface InverseListProps {
   deleteListItem: (index: number) => void;
+  provided: DroppableProvided;
+  snapshot: DroppableStateSnapshot;
   list: IContent[];
 }
 
 export const InverseList: FC<InverseListProps> = (props: InverseListProps) => {
-  const sizesCache = new CellMeasurerCache({
-    defaultHeight: 85,
-    fixedWidth: true,
-  });
 
-  const mounted: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
-  const ref: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
-  const listRef: RefObject<List> = useRef<List>(null);
+  const [showButton, setShowButton] = useState(false)
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
 
-  useEffect(() => {
-    console.log(mounted);
-    if (mounted.current) {
-      sizesCache.clearAll();
-      listRef?.current?.recomputeRowHeights();
-      setTimeout(() => scrollToBottom());
-    }
-  },[mounted]);
+  const scrollBottom = () => {
+    virtuosoRef?.current?.scrollToIndex(props.list.length);
+  }
 
-  const width = 280;
-
-  const [showScrollButton, setShowScrollButton] = useState(true);
-
-  // useEffect(() => {
-  //   ref?.current?.addEventListener('scroll', () => {
-  //     console.log(ref);
-  //     if (ref?.current && ref.current?.scrollTop < 0) {
-  //       setShowScrollButton(true);
-  //     } else {
-  //       setShowScrollButton(false);
-  //     }
-  //   });
-  // }, []);
-
-  const scrollToBottom = () => {
-    listRef.current?.scrollToRow(props.list.length);
-    // hack on react-virtualized issue
-    setTimeout(() => {
-      listRef.current?.scrollToRow(props.list.length);
-    });
-  };
-
-  const renderItem = (
-    item: IContent,
-    index: number,
-    style: Object,
-    parent: MeasuredCellParent
-  ) => {
+  const HeightPreservingItem = useCallback(({ children, ...props }) => {
+    const [size, setSize] = useState(0);
+    const knownSize = props['data-known-size'];
+    useEffect(() => {
+      setSize((prevSize) => {
+        return knownSize == 0 ? prevSize : knownSize;
+      });
+    }, [knownSize]);
     return (
-      <CellMeasurer
-        cache={sizesCache}
-        columnIndex={0}
-        key={item.id}
-        parent={parent}
-        rowIndex={index}
-        width={width}
+      <div
+        {...props}
+        className="height-preserving-container"
+        style={{
+          '--child-height': `${size}px`,
+        }}
       >
-        <div key={item.id} className="p-2" style={style}>
-          <div className="rounded border p-4 bg-gradient-to-r from-indigo-50 to-indigo-100">
-            <div className="flex justify-between mb-2">
-              <span className="font-bold">item-{index + 1}</span>
-              <span>id:{item.id}</span>
-              <button
-                className="flex justify-center content-center px-2 font-semibold rounded-lg shadow-md text-white bg-pink-200 hover:bg-pink-700"
-                onClick={() => props.deleteListItem(index)}
-              >
-                &#10005;
-              </button>
-            </div>
-            <div className="prose">
-              <p className="text-justify">{item.content}</p>
-            </div>
-          </div>
-        </div>
-      </CellMeasurer>
+        {children}
+      </div>
     );
-  };
-
-  const rowRenderer =
-    (list: IContent[]) =>
-    ({
-      index,
-      style,
-      parent,
-    }: {
-      index: number;
-      style: Object;
-      parent: MeasuredCellParent;
-    }) => {
-      const item: IContent = list[index];
-      return renderItem(item, index, style, parent);
-    };
+  }, []);
 
   return (
-    <div className="flex flex-col flex-1" ref={mounted}>
+    <div className="flex flex-col flex-1">
       <p>{props.list.length} Items</p>
       <div>
-        {props.list.length && showScrollButton ? (
-          <a onClick={() => scrollToBottom()} className="">
+        {props.list.length && showButton ? (
+          <a onClick={scrollBottom}>
             Back to bottom
           </a>
         ) : (
           <span>&nbsp;</span>
         )}
       </div>
-      <AutoSizer>
-        {({ width, height }) => (
-          <List
-            // className={styles.List}
-            ref={listRef}
-            className="scroll-bottom flex-col-reverse"
-            deferredMeasurementCache={sizesCache}
-            height={height}
-            rowCount={props.list.length}
-            rowHeight={sizesCache.rowHeight}
-            rowRenderer={rowRenderer(props.list)}
-            width={width}
-          />
-        )}
-      </AutoSizer>
+      <div className="flex-1 border">
+        <Virtuoso
+          ref={virtuosoRef}
+          scrollerRef={(scrollerRef) => {
+            if (scrollerRef instanceof HTMLElement) {
+              props.provided.innerRef(scrollerRef);
+            }
+          }}
+          initialTopMostItemIndex={props.list.length}
+          followOutput={true}
+          atBottomStateChange={(atBottom: boolean) => {setShowButton(!atBottom)}}
+          components={{ Item: HeightPreservingItem }}
+          data={props.list}
+          itemContent={(index, item) => {
+            return (
+              <Draggable draggableId={item.id} index={index} key={item.id}>
+                {(provided, snapshot) => (
+                  <ListItem
+                    provided={provided}
+                    isDragging={snapshot.isDragging}
+                    deleteListItem={props.deleteListItem}
+                    index={index}
+                    item={item}
+                  />
+                )}
+              </Draggable>
+            );
+          }}
+        />
+      </div>
     </div>
   );
 };
